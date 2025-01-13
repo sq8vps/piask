@@ -5,6 +5,11 @@
 #include <time.h>
 #include "my_timers.h"
 
+//optimization method to use
+#define USE_OPENMP
+
+#define NUM_THREADS 4 //number of threads to be used
+
 //type to use for real numbers
 //#define USE_FLOAT
 //#define USE_DOUBLE
@@ -16,7 +21,11 @@
 #define DELTA ((REAL)0.01L) //max. discrepancy when comparing distance (to compensate for rounding errors)
 #define RANDOM_LIMIT (REAL[2]){-10.L, 10.L} //random coordinates generation lower and higher limit
 
-#ifdef USE_FLOAT
+#if defined(USE_OPENMP)
+#include <omp.h>
+#endif
+
+#if defined(USE_FLOAT)
     #define REAL float
     #define SQRT sqrtf
     #define ABS fabsf
@@ -65,6 +74,8 @@ static inline REAL getDistance(const Vec3 *first, const Vec3 *second)
 
 int main(int argc, char *argv[])
 {
+    omp_set_num_threads(NUM_THREADS);
+
     srand(time(NULL));
 
     Vec3 center = CENTER;
@@ -81,6 +92,9 @@ int main(int argc, char *argv[])
     printf("Distance: %Lf, max. discrepancy: %Lf\n", (long double)DISTANCE, (long double)DELTA);
     printf("Generating random particles with coordinates from %Lf to %Lf... ", (long double)RANDOM_LIMIT[0], (long double)RANDOM_LIMIT[1]);
 
+#if defined(USE_OPENMP)
+    #pragma omp parallel for
+#endif
     for(size_t i = 0; i < NUM_PARTICLES; i++)
     {
         particles[i].position.x = randr();
@@ -94,6 +108,9 @@ int main(int argc, char *argv[])
     
     start_time();
 
+#if defined(USE_OPENMP)
+    #pragma omp parallel for schedule(guided) reduction(+:count)
+#endif
     for(size_t i = 0; i < NUM_PARTICLES; i++)
     {
         if(ABS(getDistance(&(particles[i].position), &center) - DISTANCE) <= DELTA)
