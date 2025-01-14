@@ -41,9 +41,7 @@ int main(int argc, char *argv[])
         start_time();
     }
 
-    count = Find(particles, found, ctx);
-
-    if(0 != count)
+    if(Find(particles, found, ctx, &count))
     {
         stop_time();
 

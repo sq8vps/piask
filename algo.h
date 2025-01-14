@@ -24,7 +24,7 @@ static inline REAL distance(const Vec3 *first, const Vec3 *second)
 
 bool Generate(Particle *buffer, void *context);
 
-size_t Find(Particle *input, Particle **output, void *context);
+bool Find(Particle *input, Particle **output, void *context, size_t *sum);
 
 bool Initialize(int argc, char **argv, void **context);
 

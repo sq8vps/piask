@@ -44,12 +44,12 @@ __global__ void cudaGenerate(Particle *cudaInput, unsigned int seed)
     }
 }
 
-__global__ void cudaFind(Particle *cudaInput, Particle **cudaOutput, int *sum)
+__global__ void cudaFind(Particle *cudaInput, Particle **cudaOutput, size_t *sum)
 {
     Vec3 center = CENTER;
     int index = threadIdx.x + blockIdx.x * blockDim.x;
     size_t shift = index * PARTICLES_PER_THREAD;
-    int count = 0;
+    size_t count = 0;
 
     for(size_t i = 0; i < PARTICLES_PER_THREAD; i++)
     {
@@ -76,14 +76,13 @@ bool Generate(Particle *buffer, void *context)
     return true;
 }
 
-size_t Find(Particle *input, Particle **output, void *context)
+bool Find(Particle *input, Particle **output, void *context, size_t *sum)
 {
-    int *deviceSum;
-    int sum = 0;
+    size_t *deviceSum;
     cudaMalloc(&cudaOutput, NUM_PARTICLES * sizeof(Particle*));
     cudaMalloc(&deviceSum, sizeof(*deviceSum));
     
-    cudaMemcpy(deviceSum, &sum, sizeof(sum), cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceSum, sum, sizeof(*sum), cudaMemcpyHostToDevice);
 
     cudaFind<<<NUM_BLOCKS, NUM_THREADS>>>(cudaInput, cudaOutput, deviceSum);
 
@@ -91,8 +90,9 @@ size_t Find(Particle *input, Particle **output, void *context)
     cudaFree(cudaOutput);
     cudaFree(cudaInput);
 
-    cudaMemcpy(&sum, deviceSum, sizeof(sum), cudaMemcpyDeviceToHost);
-    return sum;
+    cudaMemcpy(sum, deviceSum, sizeof(*sum), cudaMemcpyDeviceToHost);
+    cudaFree(deviceSum);
+    return true;
 }
 
 bool Initialize(int argc, char **argv, void **context)
