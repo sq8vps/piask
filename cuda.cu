@@ -9,6 +9,19 @@ static Particle *cudaInput = NULL;
 static Particle **cudaOutput = NULL;
 __shared__ __device__ int *sum = NULL;
 
+__device__ static REAL randr(void) 
+{
+    REAL r = SIN(rand() * rand());
+    return RANDOM_LIMIT[0] + (RANDOM_LIMIT[1] - RANDOM_LIMIT[0]) * ABS(r);
+}
+
+__device__ static REAL distance(const Vec3 *first, const Vec3 *second)
+{
+    return SQRT((first->x - second->x) * (first->x - second->x)
+            +   (first->y - second->y) * (first->y - second->y)
+            +   (first->z - second->z) * (first->z - second->z));
+}
+
 __global__ void cudaGenerate(Particle *cudaInput)
 {
     int index = threadIdx.x + blockIdx.x * blockDim.x;
