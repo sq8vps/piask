@@ -7,9 +7,9 @@
 
 static Particle *cudaInput = NULL;
 static Particle **cudaOutput = NULL;
-__shared__ int sum;
+__shared__ __device__ int *sum = NULL;
 
-__global__ void cudaGenerate(void)
+__global__ void cudaGenerate(Particle *cudaInput)
 {
     int index = threadIdx.x + blockIdx.x * blockDim.x;
     size_t shift = index * PARTICLES_PER_THREAD;
@@ -22,13 +22,12 @@ __global__ void cudaGenerate(void)
     }
 }
 
-__global__ void cudaFind(void)
+__global__ void cudaFind(Particle *cudaInput, Particle **cudaOutput, int *sum)
 {
     Vec3 center = CENTER;
     int index = threadIdx.x + blockIdx.x * blockDim.x;
     size_t shift = index * PARTICLES_PER_THREAD;
-
-    int count = -1;
+    int count = 0;
 
     for(size_t i = 0; i < PARTICLES_PER_THREAD; i++)
     {
@@ -38,14 +37,14 @@ __global__ void cudaFind(void)
         }
     }
 
-    atomicAdd(&sum, count);
+    atomicAdd(sum, count);
 }
 
 bool Generate(Particle *buffer, void *context)
 {
     cudaMalloc((void**)&cudaInput, NUM_PARTICLES * sizeof(Particle));
 
-    cudaGenerate<<<NUM_BLOCKS, NUM_THREADS>>>();
+    cudaGenerate<<<NUM_BLOCKS, NUM_THREADS>>>(cudaInput);
 
     cudaMemcpy(buffer, cudaInput, NUM_PARTICLES * sizeof(Particle), cudaMemcpyDeviceToHost);
 
@@ -54,18 +53,21 @@ bool Generate(Particle *buffer, void *context)
 
 size_t Find(Particle *input, Particle **output, void *context)
 {
+    int *deviceSum;
+    int sum = 0;
     cudaMalloc((void***)&cudaOutput, NUM_PARTICLES * sizeof(Particle*));
-    int t = 0;
-    cudaMemcpy(&sum, &t, sizeof(sum), cudaMemcpyHostToDevice);
+    cudaMalloc(&deviceSum, sizeof(*deviceSum));
+    
+    cudaMemcpy(deviceSum, &sum, sizeof(sum), cudaMemcpyHostToDevice);
 
-    cudaFind<<<NUM_BLOCKS, NUM_THREADS>>>();
+    cudaFind<<<NUM_BLOCKS, NUM_THREADS>>>(cudaInput, cudaOutput, deviceSum);
 
     cudaMemcpy(output, cudaOutput, NUM_PARTICLES * sizeof(Particle*), cudaMemcpyDeviceToHost);
     cudaFree(cudaOutput);
     cudaFree(cudaInput);
 
-    cudaMemcpy(&t, &sum, sizeof(sum), cudaMemcpyDeviceToHost);
-    return t;
+    cudaMemcpy(&sum, deviceSum, sizeof(sum), cudaMemcpyDeviceToHost);
+    return sum;
 }
 
 bool Initialize(int argc, char **argv, void **context)
