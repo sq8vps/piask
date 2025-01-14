@@ -1,6 +1,9 @@
-#include "algo.h"
+#include "types.h"
 #include "config.h"
-
+extern "C"
+{
+#include "my_timers.h"
+}
 #ifdef USE_CUDA
 
 #define PARTICLES_PER_THREAD (NUM_PARTICLES / (NUM_BLOCKS * NUM_THREADS))
@@ -11,7 +14,7 @@ static Particle **cudaOutput = NULL;
 __device__ static unsigned int cudaRand(unsigned int *state)
 {
     *state = *state * 1103515245 + 12345;
-    return (unsigned int)(*state / (2 * RAND_MAX)) % RAND_MAX;    
+    return (unsigned int)(*state / (RAND_MAX)) % (RAND_MAX >> 1);    
 }
 
 __device__ static REAL randr(unsigned int *state) 
@@ -59,11 +62,14 @@ __global__ void cudaFind(Particle *cudaInput, Particle **cudaOutput, int *sum)
     atomicAdd(sum, count);
 }
 
+extern "C"
+{
+
 bool Generate(Particle *buffer, void *context)
 {
     cudaMalloc(&cudaInput, NUM_PARTICLES * sizeof(Particle));
 
-    cudaGenerate<<<NUM_BLOCKS, NUM_THREADS>>>(cudaInput);
+    cudaGenerate<<<NUM_BLOCKS, NUM_THREADS>>>(cudaInput, start_time());
 
     cudaMemcpy(buffer, cudaInput, NUM_PARTICLES * sizeof(Particle), cudaMemcpyDeviceToHost);
 
@@ -97,6 +103,8 @@ bool Initialize(int argc, char **argv, void **context)
 void Finalize(void *context)
 {
     
+}
+
 }
 
 #if (NUM_PARTICLES % (NUM_BLOCKS * NUM_THREADS))
