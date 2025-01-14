@@ -4,7 +4,7 @@
 
 static double timestamp_start, timestamp_end;
 
-void start_time(void)
+double start_time(void)
 {
 
   /* Get current time */
@@ -13,7 +13,7 @@ void start_time(void)
 
   /* Store time-stamp in micro-seconds */
   timestamp_start = (double)ts.tv_sec * 1000000.0 + (double)ts.tv_usec;
-
+  return timestamp_start;
 }
 
 void stop_time(void)
