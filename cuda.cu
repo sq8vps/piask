@@ -7,11 +7,16 @@
 
 static Particle *cudaInput = NULL;
 static Particle **cudaOutput = NULL;
-__shared__ __device__ int *sum = NULL;
 
-__device__ static REAL randr(void) 
+__device__ static unsigned int cudaRand(unsigned int *state)
 {
-    REAL r = SIN(rand() * rand());
+    *state = *state * 1103515245 + 12345;
+    return (unsigned int)(*state / (2 * RAND_MAX)) % RAND_MAX;    
+}
+
+__device__ static REAL randr(unsigned int *state) 
+{
+    REAL r = SIN(cudaRand(state) * cudaRand(state));
     return RANDOM_LIMIT[0] + (RANDOM_LIMIT[1] - RANDOM_LIMIT[0]) * ABS(r);
 }
 
@@ -22,16 +27,17 @@ __device__ static REAL distance(const Vec3 *first, const Vec3 *second)
             +   (first->z - second->z) * (first->z - second->z));
 }
 
-__global__ void cudaGenerate(Particle *cudaInput)
+__global__ void cudaGenerate(Particle *cudaInput, unsigned int seed)
 {
     int index = threadIdx.x + blockIdx.x * blockDim.x;
     size_t shift = index * PARTICLES_PER_THREAD;
+    unsigned int state = seed + index;
 
     for(size_t i = 0; i < PARTICLES_PER_THREAD; i++)
     {
-        cudaInput[shift + i].x = randr();
-        cudaInput[shift + i].y = randr();
-        cudaInput[shift + i].z = randr();
+        cudaInput[shift + i].x = randr(&state);
+        cudaInput[shift + i].y = randr(&state);
+        cudaInput[shift + i].z = randr(&state);
     }
 }
 
@@ -55,7 +61,7 @@ __global__ void cudaFind(Particle *cudaInput, Particle **cudaOutput, int *sum)
 
 bool Generate(Particle *buffer, void *context)
 {
-    cudaMalloc((void**)&cudaInput, NUM_PARTICLES * sizeof(Particle));
+    cudaMalloc(&cudaInput, NUM_PARTICLES * sizeof(Particle));
 
     cudaGenerate<<<NUM_BLOCKS, NUM_THREADS>>>(cudaInput);
 
@@ -68,7 +74,7 @@ size_t Find(Particle *input, Particle **output, void *context)
 {
     int *deviceSum;
     int sum = 0;
-    cudaMalloc((void***)&cudaOutput, NUM_PARTICLES * sizeof(Particle*));
+    cudaMalloc(&cudaOutput, NUM_PARTICLES * sizeof(Particle*));
     cudaMalloc(&deviceSum, sizeof(*deviceSum));
     
     cudaMemcpy(deviceSum, &sum, sizeof(sum), cudaMemcpyHostToDevice);
