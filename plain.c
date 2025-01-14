@@ -14,19 +14,19 @@ bool Generate(Particle *buffer, void *context)
     return true;
 }
 
-size_t Find(Particle *input, Particle **output, void *context)
+bool Find(Particle *input, Particle **output, void *context, size_t *sum)
 {
-    size_t count = 0;
+    *sum = 0;
     Vec3 center = CENTER;
 
     for(size_t i = 0; i < NUM_PARTICLES; i++)
     {
         if(ABS(distance(&(input[i]), &center) - DISTANCE) <= DELTA)
         {
-            output[count++] = &(input[i]);
+            output[(*sum)++] = &(input[i]);
         }
     }
-    return count;
+    return true;
 }
 
 bool Initialize(int argc, char **argv, void **context)

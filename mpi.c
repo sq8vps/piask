@@ -42,7 +42,7 @@ bool Generate(Particle *buffer, void *context)
     return !(mpi->rank);
 }
 
-size_t Find(Particle *input, Particle **output, void *context)
+bool Find(Particle *input, Particle **output, void *context, size_t *sum)
 {
     struct MpiContext *mpi = context;
 
@@ -53,7 +53,6 @@ size_t Find(Particle *input, Particle **output, void *context)
                 0, MPI_COMM_WORLD);
 
     unsigned int count = 0;
-    unsigned int sum = 0;
     Vec3 center = CENTER;
 
     for(size_t i = 0; i < NUM_PARTICLES / mpi->size; i++)
@@ -64,13 +63,13 @@ size_t Find(Particle *input, Particle **output, void *context)
         }
     }
 
-    MPI_Reduce(&count, &sum, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&count, sum, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD);
 
     MPI_Gather(mpi->output, NUM_PARTICLES / mpi->size, MPI_UINT64_T,
             output, NUM_PARTICLES / mpi->size, MPI_UINT64_T,
             0, MPI_COMM_WORLD);
 
-    return (!mpi->rank) ? sum : 0;
+    return !mpi->rank;
 }
 
 bool Initialize(int argc, char **argv, void **context)

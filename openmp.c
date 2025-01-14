@@ -17,7 +17,7 @@ bool Generate(Particle *buffer, void *context)
     return true;
 }
 
-size_t Find(Particle *input, Particle **output, void *context)
+bool Find(Particle *input, Particle **output, void *context, size_t *sum)
 {
     size_t count = 0;
     Vec3 center = CENTER;
@@ -30,7 +30,8 @@ size_t Find(Particle *input, Particle **output, void *context)
             output[count++] = &(input[i]);
         }
     }
-    return count;
+    *sum = count;
+    return true;
 }
 
 bool Initialize(int argc, char **argv, void **context)
