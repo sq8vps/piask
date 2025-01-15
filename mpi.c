@@ -42,7 +42,7 @@ bool Generate(Particle *buffer, void *context)
     return !(mpi->rank);
 }
 
-bool Find(Particle *input, Particle **output, void *context, size_t *sum)
+bool Find(Particle *input, Particle **output, void *context, unsigned int *sum)
 {
     struct MpiContext *mpi = context;
 

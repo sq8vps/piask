@@ -1,5 +1,7 @@
 #include "types.h"
 #include "config.h"
+#include <curand.h>
+#include <curand_kernel.h>
 extern "C"
 {
 #include "my_timers.h"
@@ -11,16 +13,11 @@ extern "C"
 static Particle *cudaInput = NULL;
 static Particle **cudaOutput = NULL;
 
-__device__ static unsigned int cudaRand(unsigned int *state)
+__device__ static REAL randr(curandState_t *state) 
 {
-    *state = *state * 1103515245 + 12345;
-    return (unsigned int)(*state / (RAND_MAX)) % (RAND_MAX >> 1);    
-}
-
-__device__ static REAL randr(unsigned int *state) 
-{
-    REAL r = SIN(cudaRand(state) * cudaRand(state));
-    return RANDOM_LIMIT[0] + (RANDOM_LIMIT[1] - RANDOM_LIMIT[0]) * ABS(r);
+   return curand_uniform(state) * (RANDOM_LIMIT[1] - RANDOM_LIMIT[0]) + RANDOM_LIMIT[0];
+	// REAL r = SIN(cudaRand(state) * cudaRand(state));
+   // return RANDOM_LIMIT[0] + (RANDOM_LIMIT[1] - RANDOM_LIMIT[0]) * ABS(r);
 }
 
 __device__ static REAL distance(const Vec3 *first, const Vec3 *second)
@@ -30,26 +27,31 @@ __device__ static REAL distance(const Vec3 *first, const Vec3 *second)
             +   (first->z - second->z) * (first->z - second->z));
 }
 
-__global__ void cudaGenerate(Particle *cudaInput, unsigned int seed)
+__global__ static void initRandom(curandState_t *state, unsigned long long seed)
+{
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    curand_init(seed + index, index, 0, &(state[index]));
+}
+
+__global__ void cudaGenerate(Particle *cudaInput, curandState_t *state)
 {
     int index = threadIdx.x + blockIdx.x * blockDim.x;
     size_t shift = index * PARTICLES_PER_THREAD;
-    unsigned int state = seed + index;
 
     for(size_t i = 0; i < PARTICLES_PER_THREAD; i++)
     {
-        cudaInput[shift + i].x = randr(&state);
-        cudaInput[shift + i].y = randr(&state);
-        cudaInput[shift + i].z = randr(&state);
+        cudaInput[shift + i].x = randr(&(state[index]));
+        cudaInput[shift + i].y = randr(&(state[index]));
+        cudaInput[shift + i].z = randr(&(state[index]));
     }
 }
 
-__global__ void cudaFind(Particle *cudaInput, Particle **cudaOutput, size_t *sum)
+__global__ void cudaFind(Particle *cudaInput, Particle **cudaOutput, unsigned int *sum)
 {
     Vec3 center = CENTER;
     int index = threadIdx.x + blockIdx.x * blockDim.x;
     size_t shift = index * PARTICLES_PER_THREAD;
-    size_t count = 0;
+    unsigned int count = 0;
 
     for(size_t i = 0; i < PARTICLES_PER_THREAD; i++)
     {
@@ -68,17 +70,20 @@ extern "C"
 bool Generate(Particle *buffer, void *context)
 {
     cudaMalloc(&cudaInput, NUM_PARTICLES * sizeof(Particle));
+    curandState_t *state;
+    cudaMalloc(&state, NUM_BLOCKS * NUM_THREADS * sizeof(*state));
 
-    cudaGenerate<<<NUM_BLOCKS, NUM_THREADS>>>(cudaInput, start_time());
+    initRandom<<<NUM_BLOCKS, NUM_THREADS>>>(state, start_time());
+    cudaGenerate<<<NUM_BLOCKS, NUM_THREADS>>>(cudaInput, state);
 
     cudaMemcpy(buffer, cudaInput, NUM_PARTICLES * sizeof(Particle), cudaMemcpyDeviceToHost);
 
     return true;
 }
 
-bool Find(Particle *input, Particle **output, void *context, size_t *sum)
+bool Find(Particle *input, Particle **output, void *context, unsigned int *sum)
 {
-    size_t *deviceSum;
+    unsigned int *deviceSum;
     cudaMalloc(&cudaOutput, NUM_PARTICLES * sizeof(Particle*));
     cudaMalloc(&deviceSum, sizeof(*deviceSum));
     

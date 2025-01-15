@@ -17,9 +17,9 @@ bool Generate(Particle *buffer, void *context)
     return true;
 }
 
-bool Find(Particle *input, Particle **output, void *context, size_t *sum)
+bool Find(Particle *input, Particle **output, void *context, unsigned int *sum)
 {
-    size_t count = 0;
+    unsigned int count = 0;
     Vec3 center = CENTER;
 
     #pragma omp parallel for schedule(guided) reduction(+:count)

@@ -8,7 +8,7 @@
 
 static Particle particles[NUM_PARTICLES];
 static Particle *found[NUM_PARTICLES];
-static size_t count = 0;
+static unsigned int count = 0;
 
 int main(int argc, char *argv[])
 {
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 
         printf("OK\n");
 
-        printf("Found %lu particles in %f ms\n", count, elapsed_time());
+        printf("Found %u particles in %f ms\n", count, elapsed_time());
     }
     
     Finalize(ctx);

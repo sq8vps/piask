@@ -13,11 +13,11 @@
 #endif
 
 #if !defined(NUM_BLOCKS)
-#define NUM_BLOCKS 4 //number of thread blocks (CUDA)
+#define NUM_BLOCKS 512 //number of thread blocks (CUDA)
 #endif
 
 #if !defined(NUM_THREADS)
-#define NUM_THREADS 4 //number of threads to be used (OpenMP, CUDA)
+#define NUM_THREADS 64 //number of threads to be used (OpenMP, CUDA)
 #endif
 
 #if !defined(USE_FLOAT) && !defined(USE_DOUBLE) && !defined(USE_LONG_DOUBLE)
@@ -29,7 +29,7 @@
 
 #endif
 
-#define NUM_PARTICLES 10000000 //number of particles
+#define NUM_PARTICLES (1 << 24) //number of particles
 #define CENTER {0.L, 0.L, 0.L} //center point
 #define DISTANCE ((REAL)1.L) //distance from the center point
 #define DELTA ((REAL)0.01L) //max. discrepancy when comparing distance (to compensate for rounding errors)
