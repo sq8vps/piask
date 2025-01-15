@@ -1,12 +1,14 @@
 #include "types.h"
 #include "config.h"
-#include <curand.h>
-#include <curand_kernel.h>
+
+#ifdef USE_CUDA
+
 extern "C"
 {
 #include "my_timers.h"
 }
-#ifdef USE_CUDA
+#include <curand.h>
+#include <curand_kernel.h>
 
 #define PARTICLES_PER_THREAD (NUM_PARTICLES / (NUM_BLOCKS * NUM_THREADS))
 
